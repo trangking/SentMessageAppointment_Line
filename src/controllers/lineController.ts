@@ -1,9 +1,10 @@
 import axios from "axios";
 import { Elysia, t } from "elysia";
-
+import "dotenv/config";
+const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 const headers = {
   "Content-Type": "application/json",
-  Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
+  Authorization: `Bearer ${accessToken}`,
 };
 const LINE_BOT_API = "https://api.line.me/v2/bot";
 
