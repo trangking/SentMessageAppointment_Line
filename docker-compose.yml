@@ -8,4 +8,4 @@ services:
       - "3000:3000"
     env_file:
       - .env  # ระบุไฟล์ .env ที่ต้องการโหลด
-    command: ["bun", "dev"]
+    command: ["bun", "run", "start"]

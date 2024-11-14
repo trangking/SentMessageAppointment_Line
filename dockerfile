@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 3000
 
 # สั่งรันแอป
-CMD ["bun", "dev"]
+CMD ["bun", "run", "start"]
