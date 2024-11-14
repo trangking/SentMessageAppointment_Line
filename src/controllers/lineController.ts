@@ -1,83 +1,104 @@
-import { Elysia, t } from "elysia";
 import axios from "axios";
-import {
-  LINE_ACCESS_TOKEN,
-  LINE_SENDMESSAGE_URL,
-  LINE_OAUTH_URL,
-} from "../config/lineConfig";
-import { error } from "console";
+import { Elysia, t } from "elysia";
 
-// Define types if Elysia doesn’t provide them
-interface Request {
-  body: {
-    userId?: string;
-    message?: string;
-    id_token?: string;
-    client_id?: string;
-  };
-}
-
-interface Response {
-  status: (code: number) => Response;
-  json: (data: object) => void;
-}
-
-export const AuthLine = async (req: Request, res: Response) => {
-  const { id_token, client_id } = req.body;
-  if (!id_token || client_id) {
-    return res
-      .status(400)
-      .json({ error: "id_token and client_id are required" });
-  }
-  try {
-    const response = await axios.get(LINE_OAUTH_URL, {
-      params: {
-        id_token: id_token,
-        client_id: client_id,
-      },
-    });
-    res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    // จัดการ error
-    console.error("Error verifying LINE token:", error);
-    res.status(500).json({ error: "Failed to verify token" });
-  }
+const headers = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`,
 };
+const LINE_BOT_API = "https://api.line.me/v2/bot";
 
-export const sendLineMessage = async (req: Request, res: Response) => {
-  const { userId, message } = req.body;
-
-  // Validate that userId and message are provided
-  if (!userId || !message) {
-    return res.status(400).json({ error: "User ID and message are required" });
-  }
+const sendLineMessage = async (userId: string, nextAppointment: string) => {
+  console.log("Received userId:", userId);
+  console.log("Received nextAppointment:", nextAppointment);
 
   try {
-    // Send POST request to LINE API
-    const response = await axios.post(
-      LINE_SENDMESSAGE_URL,
-      {
-        to: userId,
-        messages: [
-          {
-            type: "text",
-            text: message,
+    console.log("--------start send Message--------");
+
+    if (!userId || !nextAppointment) {
+      return { status: "error" };
+    }
+
+    // โครงสร้าง Flex Message
+    const body = {
+      to: userId,
+      messages: [
+        {
+          type: "flex",
+          altText: "การแจ้งเตือนการนัดหมาย",
+          contents: {
+            type: "bubble",
+            hero: {
+              type: "image",
+              url: "https://www.planfy.com/assets/images/front/industries/veterinarians/woman-veterinarian-with-stethoscope-boy-with-dog--lg.jpg",
+              size: "full",
+              aspectRatio: "20:13",
+              aspectMode: "cover",
+            },
+            body: {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                {
+                  type: "text",
+                  text: "การแจ้งเตือนการนัดหมาย",
+                  weight: "bold",
+                  size: "xl",
+                  margin: "md",
+                },
+                {
+                  type: "text",
+                  text: "การนัดหมายครั้งถัดไปของคุณคือ:",
+                  size: "md",
+                  color: "#555555",
+                  margin: "sm",
+                },
+                {
+                  type: "separator",
+                  margin: "lg",
+                },
+                {
+                  type: "box",
+                  layout: "vertical",
+                  margin: "lg",
+                  spacing: "sm",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "baseline",
+                      contents: [
+                        {
+                          type: "text",
+                          text: "วันที่",
+                          size: "sm",
+                          color: "#aaaaaa",
+                          flex: 1,
+                        },
+                        {
+                          type: "text",
+                          text: nextAppointment, // แสดงวันที่จากตัวแปร
+                          size: "sm",
+                          color: "#666666",
+                          flex: 3,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
           },
-        ],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${LINE_ACCESS_TOKEN}`,
         },
-      }
-    );
+      ],
+    };
 
-    // Send success response
-    res.status(200).json({ success: true, data: response.data });
+    // ส่ง Flex Message
+    await axios.post(`${LINE_BOT_API}/message/push`, body, { headers });
+
+    return { status: "success" };
   } catch (error) {
-    // Handle error
-    console.error("Error sending message to LINE:", error);
-    res.status(500).json({ error: "Failed to send message" });
+    console.error("Error sending message:", error);
+    return { status: "error" };
   }
 };
+
+export { sendLineMessage };
